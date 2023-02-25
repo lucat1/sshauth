@@ -1,0 +1,5 @@
+query CheckUser($uid: String!) {
+  users(filters: { eq: { field: "uid", value: $uid } }) {
+    id
+  }
+}

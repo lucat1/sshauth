@@ -1,0 +1,96 @@
+input EqualityConstraint {
+  field: String!
+  value: String!
+}
+
+type Mutation {
+  createUser(user: CreateUserInput!): User!
+  createGroup(name: String!): Group!
+  updateUser(user: UpdateUserInput!): Success!
+  updateGroup(group: UpdateGroupInput!): Success!
+  addUserToGroup(userId: String!, groupId: Int!): Success!
+  removeUserFromGroup(userId: String!, groupId: Int!): Success!
+  deleteUser(userId: String!): Success!
+  deleteGroup(groupId: Int!): Success!
+}
+
+type Group {
+  id: Int!
+  displayName: String!
+  creationDate: DateTimeUtc!
+  uuid: String!
+  "The groups to which this user belongs."
+  users: [User!]!
+}
+
+"""
+  A filter for requests, specifying a boolean expression based on field constraints. Only one of
+  the fields can be set at a time.
+"""
+input RequestFilter {
+  any: [RequestFilter!]
+  all: [RequestFilter!]
+  not: RequestFilter
+  eq: EqualityConstraint
+  memberOf: String
+  memberOfId: Int
+}
+
+"DateTime"
+scalar DateTimeUtc
+
+"The fields that can be updated for a group."
+input UpdateGroupInput {
+  id: Int!
+  displayName: String
+}
+
+type Query {
+  apiVersion: String!
+  user(userId: String!): User!
+  users(filters: RequestFilter): [User!]!
+  groups: [Group!]!
+  group(groupId: Int!): Group!
+}
+
+"The details required to create a user."
+input CreateUserInput {
+  id: String!
+  email: String!
+  displayName: String
+  firstName: String
+  lastName: String
+  avatar: String
+}
+
+type User {
+  id: String!
+  email: String!
+  displayName: String!
+  firstName: String!
+  lastName: String!
+  avatar: String
+  creationDate: DateTimeUtc!
+  uuid: String!
+  "The groups to which this user belongs."
+  groups: [Group!]!
+}
+
+type Success {
+  ok: Boolean!
+}
+
+"The fields that can be updated for a user."
+input UpdateUserInput {
+  id: String!
+  email: String
+  displayName: String
+  firstName: String
+  lastName: String
+  avatar: String
+}
+
+schema {
+  query: Query
+  mutation: Mutation
+}
