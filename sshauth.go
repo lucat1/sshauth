@@ -50,10 +50,10 @@ const MAIL_BODY = `Your authenticatoin token is: %s`
 const TOKEN_BODY = "Enter the token you recieved by mail: "
 const TOKEN_FAILED = "Invalid token. Verification failed.\n"
 const TOKEN_RETRY = "Invalid token. Please, try again (you have %d more retries)\n"
-const ALREADY_REGISTERED = "You're already registered.\nYou can authenticate over at\n\t%s\nto manage your account. Bye!"
+const ALREADY_REGISTERED = "You're already registered.\nYou can authenticate over at\n\t%s\nto manage your account. Bye!\n"
 const PASWORD_RULES = "Please, enter your password twice. It must respect the following rules:\n- The length must be between %d and %d (included)\n- It must contain at least one letter and one digit\n"
 const PASSWORD_FAILED = "Password attempts failed. Logging out."
-const REGISTRATION_SUCCESS = "You are now registered! You can authenticate over at\n\t%s\nto manage your account. Bye!"
+const REGISTRATION_SUCCESS = "You are now registered! You can authenticate over at\n\t%s\nto manage your account. Bye!\n"
 
 func contains[T comparable](elems []T, v T) bool {
 	for _, s := range elems {
@@ -327,7 +327,7 @@ func main() {
 		if err := register(l, user, mail, passwd); err != nil {
 			log.Fatalf("Error while registering a new user with LDAP: %v", err)
 		}
-		io.WriteString(s, fmt.Sprintf(ALREADY_REGISTERED, options.LldapURI.JoinPath("/login").String()))
+		io.WriteString(s, fmt.Sprintf(REGISTRATION_SUCCESS, options.LldapURI.JoinPath("/login").String()))
 	})
 
 	listen := fmt.Sprintf("%s:%d", options.Host, options.Port)
