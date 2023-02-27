@@ -47,13 +47,13 @@ var (
 
 const WELCOME_BODY = "Welcome.\nSending a mail to %s, do you accept? (y/N): "
 const MAIL_BODY = `Your authenticatoin token is: %s`
-const TOKEN_BODY = "Enter the token you recieved by mail: "
+const TOKEN_BODY = "Enter the token you received by mail: "
 const TOKEN_FAILED = "Invalid token. Verification failed.\n"
 const TOKEN_RETRY = "Invalid token. Please, try again (you have %d more retries)\n"
-const ALREADY_REGISTERED = "You're already registered.\nYou can authenticate over at\n\t%s\nto manage your account. Bye!\n"
+const ALREADY_REGISTERED = "You're already registered.\nYou can manage your profile over at\n\t%s\nBye!\n"
 const PASWORD_RULES = "Please, enter your password twice. It must respect the following rules:\n- The length must be between %d and %d (included)\n- It must contain at least one letter and one digit\n"
 const PASSWORD_FAILED = "Password attempts failed. Logging out."
-const REGISTRATION_SUCCESS = "You are now registered! You can authenticate over at\n\t%s\nto manage your account. Bye!\n"
+const REGISTRATION_SUCCESS = "You are now registered! \nYou can manage your profile over at\n\t%s\nBye!\n"
 
 func contains[T comparable](elems []T, v T) bool {
 	for _, s := range elems {
@@ -214,7 +214,7 @@ func register(l *ldap.Conn, uid, email, password string) error {
 	addRequest := ldap.AddRequest{
 		DN: user,
 		Attributes: []ldap.Attribute{
-			ldap.Attribute{"email", []string{email}},
+			{Type: "email", Vals: []string{email}},
 		},
 	}
 
@@ -222,11 +222,8 @@ func register(l *ldap.Conn, uid, email, password string) error {
 		return fmt.Errorf("Could not add new user: %v", err)
 	}
 
-	passwordModifyRequest := ldap.PasswordModifyRequest{
-		UserIdentity: user,
-		NewPassword:  password,
-	}
-	if _, err := l.PasswordModify(&passwordModifyRequest); err != nil {
+	passwordModifyRequest := ldap.NewPasswordModifyRequest(user, "", password)
+	if _, err := l.PasswordModify(passwordModifyRequest); err != nil {
 		return fmt.Errorf("Could not add a password to the new user: %v", err)
 	}
 	return nil
@@ -238,7 +235,24 @@ func main() {
 
 	ssh.Handle(func(s ssh.Session) {
 		defer s.Close()
+
 		user := s.User()
+		// initalize the ldap connection
+		l, err := bind()
+		if err != nil {
+			log.Fatalf("Could not bind to LDAP: %v", err)
+		}
+		defer func() { l.Unbind(); l.Close() }()
+		exists, err := exists(l, user)
+		if err != nil {
+			log.Fatalf("Error while searching LDAP user: %v", err)
+		}
+		if exists {
+			// already registered
+			io.WriteString(s, fmt.Sprintf(ALREADY_REGISTERED, options.LldapURI.JoinPath("/login").String()))
+			return
+		}
+
 		mail := user + options.ToSuffix
 		io.WriteString(s, fmt.Sprintf(WELCOME_BODY, mail))
 
@@ -269,21 +283,6 @@ func main() {
 			} else {
 				break
 			}
-		}
-		// initalize the ldap connection
-		l, err := bind()
-		if err != nil {
-			log.Fatalf("Could not bind to LDAP: %v", err)
-		}
-		defer l.Close()
-		exists, err := exists(l, user)
-		if err != nil {
-			log.Fatalf("Error while searching LDAP user: %v", err)
-		}
-		if exists {
-			// already registered
-			io.WriteString(s, fmt.Sprintf(ALREADY_REGISTERED, options.LldapURI.JoinPath("/login").String()))
-			return
 		}
 
 		// not registered, add new user
@@ -324,6 +323,7 @@ func main() {
 			}
 		}
 		io.WriteString(s, "Registering user with the given password\n")
+		fmt.Println("Registering with passwd: " + passwd)
 		if err := register(l, user, mail, passwd); err != nil {
 			log.Fatalf("Error while registering a new user with LDAP: %v", err)
 		}
